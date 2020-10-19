@@ -1,0 +1,105 @@
+---
+title: "Building Permits 2019 vs 2018"
+author: '"Mehrnaz Amiri"'
+date: "6/4/2019"
+output: html_document
+---
+
+Written by Mehrnaz Amiri
+
+# SANITY CHECKS Functions
+
+The "BP_check_function" takes two arguments, new_df and old_df, which are this year and last year dataframes, respectively, and outputs the comparison results of these two dataframes. 
+
+```{r}
+library(dplyr)
+new_df <- read.csv("~/Desktop/BARI.Mehrnaz/buildingpermits20190326.csv", sep = ",", header = TRUE, stringsAsFactors=FALSE)
+old_df <- read.csv("~/Desktop/BARI.Mehrnaz/buildingpermits20180122.csv", sep = ",", header = TRUE, stringsAsFactors=FALSE)
+
+# General Sanity Check
+
+BP_check_function <- function(new_df, old_df)
+  {
+  # ROW COUNT
+  row_count <- new_df %>%
+    summarize (value = nrow(new_df)) %>%
+    mutate(metric = as.character("nrows"))
+  
+  # ROW CHANGE 
+  change_nrow <- abs(nrow(new_df) - nrow(old_df))
+  
+  # COLUMN COUNT 
+  change_ncol <- abs(ncol(new_df) - ncol(old_df))
+
+  # CHANGE IN VARIABLE NAMES
+  change_var_names <- identical(variable.names(new_df), variable.names(old_df))
+  # The names of columns in BP2019 and BP2018 are similar, but their letter cases are different
+
+  # New and Removed Rows
+  new_row <- subset(new_df, !(new_df[ ,1] %in% old_df[ ,1]))
+  removed_row <- subset(old_df, !(old_df[ ,1] %in% new_df[ ,1]))
+
+  # DUPLICATED ROWS
+  # Find duplicated rows
+  n_occur <- data.frame(table(new_df[ ,1]))
+
+  # Tells you which ids occurred more than once.
+  n_duplicated_rows <- new_df[new_df[ ,1] %in% n_occur$Var1[n_occur$Freq > 1],] %>%
+    distinct(.[ , 1], .keep_all = TRUE)
+  # Returns the records with more than one occurrence.
+  
+  # The first and last time permits are filled
+  firstPermit <- min(new_df[ ,9])
+  lastPermit <- max(new_df[ ,9])
+  
+  # Summarizing in a data frame
+  summary_df <- row_count %>%
+    rbind (c(change_nrow, "Change in number of rows")) %>%
+    rbind (c(change_ncol, "Change in number of columns")) %>%
+    rbind (c(nrow(n_duplicated_rows),"Number of rows duplicated")) %>%
+    rbind (c(change_var_names, "Variable names are the same as last year")) %>%
+    rbind (c(nrow(new_row), "Number of new rows for the year")) %>%
+    rbind (c((nrow(removed_row)), "Number of removed rows for the year")) %>%
+    rbind (c(firstPermit, "The first date permits are filled")) %>%
+    rbind (c(lastPermit, "The last date permits are filled"))
+  
+  if(change_var_names == FALSE)
+  {
+    colnamesSame <- colnames(new_df)[(colnames(new_df) %in% colnames(old_df))]
+    colnamesDiff <- colnames(new_df)[!(colnames(new_df) %in% colnames(old_df))]
+    all_dfs <- list(summary_df, colnamesSame, colnamesDiff)
+  }
+  else
+  {
+    all_dfs <- list(summary_df)
+  }
+
+  return(all_dfs)
+}
+
+BP19 <- read.csv("~/Desktop/BARI.Mehrnaz/buildingpermits20190326.csv", sep = ",", header = TRUE, stringsAsFactors=FALSE)
+BP18 <- read.csv("~/Desktop/BARI.Mehrnaz/buildingpermits20180122.csv", sep = ",", header = TRUE, stringsAsFactors=FALSE)
+
+BP_check_function(BP19, BP18)
+
+```
+
+```{r}
+# Look for new rows
+new_rows_function <- function(new_df, old_df){
+  #Change in ID_variable between years
+  new_row <- subset(new_df, !(new_df[ ,1] %in% old_df[ ,1]))
+  return(new_row)
+}
+new_rows_function(BP19, BP18)
+
+# Look for removed rows
+removed_rows_function <- function(new_df, old_df){
+  #Change in ID_variable between years
+  removed_row <- subset(old_df, !(old_df[ ,1] %in% new_df[ ,1]))
+  return(removed_row)
+}
+removed_rows_function(BP19, BP18)
+```
+
+
